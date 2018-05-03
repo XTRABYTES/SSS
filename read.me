@@ -1,0 +1,8 @@
+openssl req -newkey rsa:2048 -new -nodes -x509 -days 3650 -keyout key.pem -out cert.pem
+
+openssl s_client -host localhost -port 8080 -showcerts
+
+curl --insecure -d '{"dicom": "1.0", "type": "request", "method": "ping" }' -H "Content-Type: application/json" -X POST https://localhost:8080/v1.0/dicom
+
+curl --insecure -d '{"dicom": "1.0", "type": "request", "method": "echo", "params": "xcite" }' -H "Content-Type: application/json" -X POST https://localhost:8080/v1.0/dicom
+

@@ -1,1 +1,1 @@
-# STaTiC Simulation System
+# STaTiC Simulation Server

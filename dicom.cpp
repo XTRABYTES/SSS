@@ -12,9 +12,12 @@
 
 #include <iostream>
 #include <string>
+#include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <rapidjson/document.h>
+
+#include "payload.hpp"
 
 namespace dicom {
 
@@ -34,14 +37,25 @@ namespace dicom {
 		return true;
 	}
 
+	static bool connect(const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		// TODO: generate unique session id per connection
+		// TODO: generate new keypair for the client 
+		// TODO: link their session to the pubkey
+		// TODO: use the previously given pubkey to verify other requests
+		
+		reply.put("session_id", "1234567890");
+
+		return true;
+	}
+
 	static const struct dicomhandler dicom_handlers[] = {
 		{ "ping", ping },
 		{ "echo", echo },
+		{ "connect", connect },
 	};
 
 	std::string exec(std::string payload) {
 		boost::property_tree::ptree reppt;		   
-		reppt.put("dicom", "1.0");
 
 		rapidjson::Document d;
 		d.Parse(payload.c_str());
@@ -65,7 +79,24 @@ namespace dicom {
 		}
 
 		std::stringstream repss;
-		boost::property_tree::write_json(repss, reppt);
-		return repss.str();  
+		boost::property_tree::write_json(repss, reppt, false);
+		std::string data = repss.str();  
+
+		// fix property_tree compact write_json bug: https://svn.boost.org/trac10/ticket/121490
+		boost::trim_right(data);
+
+		char *signature = payload::generate_signature(data, payload::sss_privkey);
+
+		boost::property_tree::ptree res;
+		res.put("dicom", "1.0");
+		res.put("method", method);
+		res.put("payload", data);
+		res.put("pubkey", payload::sss_pubkey);
+		res.put("signature", signature);
+
+		std::stringstream resss;
+		boost::property_tree::write_json(resss, res);
+
+		return resss.str();
 	}
 }

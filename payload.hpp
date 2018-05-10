@@ -14,8 +14,12 @@
 #define PAYLOAD_HPP
 
 namespace payload {
+	// TODO: Generate these per connection
+	extern std::string sss_pubkey;
+	extern std::string sss_privkey;
 
 	bool verify_signature(std::string data, std::string signature, std::string pubkey);
+	char *generate_signature(std::string data, std::string privkey);
 }
 
 #endif 

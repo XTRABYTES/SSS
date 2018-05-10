@@ -19,6 +19,15 @@ Install prerequisites.
 sudo apt install git build-essential libboost-all-dev libssl-dev curl
 ```
 
+Install rapidjson (we'll get better instructions)
+
+Add `deb http://ftp.debian.org/debian/ unstable main contrib` to `/etc/apt/sources.list`, then
+
+```
+sudo apt-get update
+apt-get -t unstable install rapidjson-dev
+```
+
 Clone this repository.
 
 ```

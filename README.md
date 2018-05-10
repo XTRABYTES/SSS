@@ -56,3 +56,12 @@ You should receive the following reply from the daemon:
   "echo": "xcite"
 }
 ```
+
+#### Contributing 
+
+Code-style is TBD, but for now:
+
+- Tabs not spaces 
+- Tabsize of 4
+- Unix line endings
+

@@ -39,19 +39,12 @@ namespace dicom {
 		{ "echo", echo },
 	};
 
-	std::string exec(boost::property_tree::ptree reqpt) {
+	std::string exec(std::string payload) {
 		boost::property_tree::ptree reppt;		   
 		reppt.put("dicom", "1.0");
 
-		// TODO: param checks
-		std::string payload = reqpt.get("payload", "");
-		std::string signature = reqpt.get("signature", "");
-		std::string pubkey = reqpt.get("pubkey", "");
-
 		rapidjson::Document d;
 		d.Parse(payload.c_str());
-
-		std::cout << payload << std::endl;
 
 		std::string method = d["method"].GetString();
 

@@ -30,6 +30,7 @@
 
 #include "dicom.hpp"
 #include "ssserver.hpp"
+#include "payload.hpp"
 
 namespace http {
 	namespace dicomserver {
@@ -793,10 +794,33 @@ namespace http {
 				return;        
 			}   
 
+			// verify signature
+			std::string payload = reqpt.get("payload", "");
+			std::string signature = reqpt.get("signature", "");
+			std::string pubkey = reqpt.get("pubkey", "");
+
+			if (!payload::verify_signature(payload, signature, pubkey)) {
+				// TODO: temporary error state for debugging
+				boost::property_tree::ptree res;		   
+				res.put("dicom", "1.0");
+				res.put("error", "bad signature");
+
+				std::stringstream repss;
+				boost::property_tree::write_json(repss, res);
+				
+				rep.status = reply::bad_request;
+				rep.content = repss.str();
+				rep.headers.clear();
+				rep.headers.push_back(header("Content-Length",
+							boost::lexical_cast<std::string>(rep.content.size())));
+				rep.headers.push_back(header("Content-Type", "application/json"));
+				return;
+			}
+
 			// Fill out the reply to be sent to the client.
 			rep.status = reply::ok;
 
-			rep.content = dicom::exec(reqpt);
+			rep.content = dicom::exec(payload);
 			rep.content += "\r\n";
 
 			rep.headers.push_back(header("Date",

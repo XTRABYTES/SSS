@@ -10,14 +10,12 @@
  *
  */
 
-#ifndef DICOM_HPP
-#define DICOM_HPP
+#ifndef PAYLOAD_HPP
+#define PAYLOAD_HPP
 
+namespace payload {
 
-namespace dicom {
-
-	std::string exec(std::string payload);
-
+	bool verify_signature(std::string data, std::string signature, std::string pubkey);
 }
 
-#endif // DICOM_HPP
+#endif 

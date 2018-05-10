@@ -28,7 +28,8 @@ CXXFLAGS=-pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-securi
 OBJS= \
     build/dicom.o \
     build/ssserver.o \
-    build/sss-daemon.o 
+    build/sss-daemon.o \
+    build/payload.o 
 
 all: sss-daemon
 

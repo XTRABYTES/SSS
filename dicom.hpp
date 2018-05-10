@@ -16,8 +16,8 @@
 
 namespace dicom {
 
-  std::string exec(boost::property_tree::ptree reqpt);
-  
+	std::string exec(boost::property_tree::ptree reqpt);
+
 }
 
 #endif // DICOM_HPP

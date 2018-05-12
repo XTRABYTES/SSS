@@ -184,6 +184,7 @@ static bool write(http::dicomserver::client *client, const rapidjson::Document &
 		boost::property_tree::ptree reppt;		   
 
 		std::string method = request["method"].GetString();
+		reppt.put("method", method);
 
 		unsigned int i = 0;
 		bool methodfound = false;
@@ -212,7 +213,6 @@ static bool write(http::dicomserver::client *client, const rapidjson::Document &
 
 		boost::property_tree::ptree res;
 		res.put("dicom", "1.0");
-		res.put("method", method);
 		res.put("payload", data);
 		res.put("signature", signature);
 

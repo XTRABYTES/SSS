@@ -37,33 +37,33 @@ namespace dicom {
 	};
 
 	std::map<std::string, user*> userlist;
-	
+
 	struct dicomhandler {
 		std::string method;
 		bool (*actor)(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply);
 	};
 
 	static bool rpcq(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-	  
-	  boost::asio::io_service ios;
-	  boost::property_tree::ptree rpcreply;
-	  
-	 rpcutil::client c( ios );
-	 c.connect( "localhost:4434", "xfuelrpc", "pw123" );
-			  
-	 rpcreply = c.rpcquery(request["params"].GetString());
-	 
-	 
-	 
-	 std::stringstream rpcrepss;
-	 try {
+
+		boost::asio::io_service ios;
+		boost::property_tree::ptree rpcreply;
+
+		rpcutil::client c( ios );
+		c.connect( "localhost:4434", "xfuelrpc", "pw123" );
+
+		rpcreply = c.rpcquery(request["params"].GetString());
+
+
+
+		std::stringstream rpcrepss;
+		try {
 			boost::property_tree::write_json(rpcrepss, rpcreply);
-	 }	catch (std::exception& e)  {
-		  rpcrepss << "bad rpc reply error";
-	 }	
-	 reply.put("rpcreply", rpcrepss.str() );
-	  return true;
-   }
+		}	catch (std::exception& e)  {
+			rpcrepss << "bad rpc reply error";
+		}	
+		reply.put("rpcreply", rpcrepss.str() );
+		return true;
+	}
 
 	static bool ping(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("ping", "pong");
@@ -76,24 +76,24 @@ namespace dicom {
 		return true;
 	}
 
-static bool write(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-	 
-	 std::string value = request["value"].GetString();			
-	 std::string key = keyvaluedb.getkey(value);
-	 keyvaluedb.write(key,value);
-	  reply.put("write", value);
-	  reply.put("key", key);
-	  return true;
-   }
+	static bool write(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 
-   static bool read(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		std::string value = request["value"].GetString();			
+		std::string key = keyvaluedb.getkey(value);
+		keyvaluedb.write(key,value);
+		reply.put("write", value);
+		reply.put("key", key);
+		return true;
+	}
 
-	 std::string key = request["key"].GetString();	   
-	 std::string value = keyvaluedb.read(key);	   
-	  reply.put("read", key);
-	  reply.put("value", value);
-	  return true;
-   }
+	static bool read(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+
+		std::string key = request["key"].GetString();	   
+		std::string value = keyvaluedb.read(key);	   
+		reply.put("read", key);
+		reply.put("value", value);
+		return true;
+	}
 	static bool connect(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("session_id", client->session_id);
 		reply.put("pubkey", client->server_keys.pub);

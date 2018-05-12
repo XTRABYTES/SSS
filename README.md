@@ -67,9 +67,9 @@ You should receive a similar reply from the daemon:
     "payload": "{\"session_id\":\"d963c05c-4560-4e94-b92d-d08dc97a0b61\",\"pubkey\":\"-----BEGIN PUBLIC KEY-----\\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAp8GuaSaEZaCBf3fd4W3\\\/\\nSKdSK6TeAwDeOc6HjgcaOEuxHtWvfq+eOUo5cLgX3od1CNAyxLs+\\\/EHwJGL1Tchj\\nK0rOMto+ITjxQp2OM2GQi05lPq5wNY4WCThr5SGqxIdHAeU8iFCcc5ZOFvpiSE6T\\ntHOs4f9gKxwDYwrcK\\\/6uEdn8NDNpDRHfNYGHYqvAnujyagy0M70OLE93fMKkF2mr\\n2zDlFZt+hUxtauJIiRBTuxNBlVtGRboUN+NDEjQt7y5RCrB+yzirSTcOonYaG+K\\\/\\nztBwECh6KYaQjfkbLSNbMil8b9SQb\\\/ch5B6Z6AH6mwIs9ePE4GPJUZqHXJQZOpi8\\n0QIDAQAB\\n-----END PUBLIC KEY-----\\n\"}",
     "signature": "Lgg+QJQiqnYhppi3rl0Rw7ctiwxcE6du1z3lVxd555iK+sgYhYyMed97H1wsz89I\nhx4sai71UlnuoyRTTQpNOIYWL8BgXOFREBXFCcRTrygMyvfI7Wcw63Xpy5V\/FZ+7\nKdXHE\/QhIsyl2KOCObGGzoUQJYD9UuXIXkrYqbJ3BMFzK\/JDyVtkp3WxkCzcfNPi\nYNpX+1pBCLld5j2CkHU9RzujX64Q8AFQcE\/DgtxOJjhWXJnqX7AxbtsBQ6YKWPiL\nmfAa+NB4uB2ghPkfZIVuancwdKXoI5wMSDN0en4BwH68OHsSn1SrhLNVJBC7f6Bx\nMPtzKuY+C\/J+1OlvamoiHg==\n"
 }
+```
 
 Client libraries and a CLI tool are upcoming to aid testing.
-```
 
 #### Protocol/API
 

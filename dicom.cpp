@@ -15,36 +15,32 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
+
 #include <rapidjson/document.h>
 
+#include "ssserver.hpp"
 #include "payload.hpp"
 
 namespace dicom {
-
 	struct dicomhandler {
 		std::string method;
-		bool (*actor)(const rapidjson::Document &request, boost::property_tree::ptree &reply);
+		bool (*actor)(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply);
 	};
 
-	static bool ping(const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+	static bool ping(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("ping", "pong");
 		return true;
 	}
 
-	static bool echo(const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+	static bool echo(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		// TODO: param checks
 		reply.put("echo", request["params"].GetString());
 		return true;
 	}
 
-	static bool connect(const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-		// TODO: generate unique session id per connection
-		// TODO: generate new keypair for the client 
-		// TODO: link their session to the pubkey
-		// TODO: use the previously given pubkey to verify other requests
-		
-		reply.put("session_id", "1234567890");
-
+	static bool connect(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		reply.put("session_id", client->session_id);
+		reply.put("pubkey", payload::sss_pubkey);
 		return true;
 	}
 
@@ -54,20 +50,17 @@ namespace dicom {
 		{ "connect", connect },
 	};
 
-	std::string exec(std::string payload) {
+	std::string exec(http::dicomserver::client *client, const rapidjson::Document &request) {
 		boost::property_tree::ptree reppt;		   
 
-		rapidjson::Document d;
-		d.Parse(payload.c_str());
-
-		std::string method = d["method"].GetString();
+		std::string method = request["method"].GetString();
 
 		unsigned int i = 0;
 		bool methodfound = false;
 		for (; i < (sizeof(dicom_handlers)/sizeof((dicom_handlers)[0])); i++) {
 			if (!method.compare(dicom_handlers[i].method)) {
 				methodfound = true;
-				bool rc = dicom_handlers[i].actor(d, reppt);
+				bool rc = dicom_handlers[i].actor(client, request, reppt);
 				if (!rc) {
 					reppt.put("error", "DICOM call failed.");
 				}
@@ -91,7 +84,6 @@ namespace dicom {
 		res.put("dicom", "1.0");
 		res.put("method", method);
 		res.put("payload", data);
-		res.put("pubkey", payload::sss_pubkey);
 		res.put("signature", signature);
 
 		std::stringstream resss;

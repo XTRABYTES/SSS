@@ -13,10 +13,12 @@
 #ifndef DICOM_HPP
 #define DICOM_HPP
 
+#include "ssserver.hpp"
+#include <rapidjson/document.h>
 
 namespace dicom {
 
-	std::string exec(std::string payload);
+	std::string exec(http::dicomserver::client *client, const rapidjson::Document &d);
 
 }
 

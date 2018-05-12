@@ -233,6 +233,16 @@ namespace http {
 					boost::asio::ip::tcp::socket socket_;
 			};
 
+		class client {
+			public:
+				client(std::string sid, std::string pk) {
+					session_id = sid;
+					pubkey = pk;
+				}
+
+				std::string session_id;
+				std::string pubkey;
+		};
 
 		typedef boost::shared_ptr<connection> connection_ptr;
 		typedef boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket;

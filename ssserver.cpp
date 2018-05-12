@@ -27,6 +27,11 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+
+#include <rapidjson/document.h>
 
 #include "dicom.hpp"
 #include "ssserver.hpp"
@@ -34,6 +39,7 @@
 
 namespace http {
 	namespace dicomserver {
+		std::map<std::string, client*> clients;
 
 		std::string FormatTime(std::string fmt, boost::posix_time::ptime now) {
 			static std::locale loc(std::cout.getloc(),
@@ -790,20 +796,82 @@ namespace http {
 				}
 
 			}  catch (std::exception& e)  {
+				std::cout << e.what() << std::endl;
 				rep = reply::stock_reply(reply::bad_request);
 				return;        
 			}   
 
-			// verify signature
 			std::string payload = reqpt.get("payload", "");
 			std::string signature = reqpt.get("signature", "");
 			std::string pubkey = reqpt.get("pubkey", "");
 
-			if (!payload::verify_signature(payload, signature, pubkey)) {
+			// parse out the payload
+			rapidjson::Document request;
+			request.Parse(payload.c_str());
+
+			client *client = NULL;
+
+			// Temporary basic sanity checking 
+			try {
+				if (signature == "") {
+					throw std::invalid_argument("missing payload");
+				}
+
+				if (signature == "") {
+					throw std::invalid_argument("missing signature");
+				}
+
+				if (!request.HasMember("method")) {
+					throw std::invalid_argument("missing method");
+				}
+
+				std::string method = request["method"].GetString();
+				if (method == "connect") {
+					if (!request.HasMember("pubkey")) {
+						throw std::invalid_argument("missing pubkey");
+					}
+
+					pubkey = request["pubkey"].GetString();
+
+					// TODO: generate new keypair
+					// TODO: check for existing sessions before overwriting (pubkey differs)
+
+					boost::uuids::random_generator session_generator;
+					boost::uuids::uuid sid = session_generator();
+
+					std::string session_id = to_string(sid);
+
+					client = new ::http::dicomserver::client(session_id, pubkey);
+					clients[session_id] = client;
+
+					std::cout << "new client session: " << client->session_id << std::endl;
+				} else {
+					if (!request.HasMember("session_id")) {
+						throw std::invalid_argument("missing session_id");
+					}
+
+					std::string session_id = request["session_id"].GetString();
+
+					if (clients.count(session_id) == 0) {
+						// TODO: Handle by telling the client to establish a new connection
+						throw std::invalid_argument("invalid session");
+					}
+
+					client = clients[session_id];
+					pubkey = client->pubkey;
+					std::cout << "using pubkey for session: " << session_id << std::endl << pubkey << std::endl;
+				}
+
+
+				// verify signature
+				if (!payload::verify_signature(payload, signature, pubkey)) {
+					throw std::invalid_argument("invalid signature");
+				}
+			}  catch (std::exception& e)  {
 				// TODO: temporary error state for debugging
 				boost::property_tree::ptree res;		   
 				res.put("dicom", "1.0");
-				res.put("error", "bad signature");
+				res.put("error", e.what());
 
 				std::stringstream repss;
 				boost::property_tree::write_json(repss, res);
@@ -815,12 +883,14 @@ namespace http {
 							boost::lexical_cast<std::string>(rep.content.size())));
 				rep.headers.push_back(header("Content-Type", "application/json"));
 				return;
-			}
+			}   
+
+			std::cout << "client count: " << clients.size() << std::endl;
 
 			// Fill out the reply to be sent to the client.
 			rep.status = reply::ok;
 
-			rep.content = dicom::exec(payload);
+			rep.content = dicom::exec(client, request);
 			rep.content += "\r\n";
 
 			rep.headers.push_back(header("Date",

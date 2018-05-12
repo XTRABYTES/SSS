@@ -418,7 +418,7 @@ namespace http {
 		}
 
 		void server::handle_accept(const boost::system::error_code& e) {
-			if (!e)	{	new_ssl_conn_->start(); 	}
+			if (!e)	{	new_ssl_conn_->start();		}
 			start_accept();
 		}
 

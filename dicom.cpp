@@ -48,20 +48,20 @@ namespace dicom {
 	  boost::asio::io_service ios;
 	  boost::property_tree::ptree rpcreply;
 	  
-     rpcutil::client c( ios );
-     c.connect( "localhost:4434", "xfuelrpc", "pw123" );
-              
-     rpcreply = c.rpcquery(request["params"].GetString());
-     
-     
-     
-     std::stringstream rpcrepss;
-     try {
-            boost::property_tree::write_json(rpcrepss, rpcreply);
-     }  catch (std::exception& e)  {
-     	  rpcrepss << "bad rpc reply error";
-     }	
-     reply.put("rpcreply", rpcrepss.str() );
+	 rpcutil::client c( ios );
+	 c.connect( "localhost:4434", "xfuelrpc", "pw123" );
+			  
+	 rpcreply = c.rpcquery(request["params"].GetString());
+	 
+	 
+	 
+	 std::stringstream rpcrepss;
+	 try {
+			boost::property_tree::write_json(rpcrepss, rpcreply);
+	 }	catch (std::exception& e)  {
+		  rpcrepss << "bad rpc reply error";
+	 }	
+	 reply.put("rpcreply", rpcrepss.str() );
 	  return true;
    }
 
@@ -77,10 +77,10 @@ namespace dicom {
 	}
 
 static bool write(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-     
-     std::string value = request["value"].GetString();          
-     std::string key = keyvaluedb.getkey(value);
-     keyvaluedb.write(key,value);
+	 
+	 std::string value = request["value"].GetString();			
+	 std::string key = keyvaluedb.getkey(value);
+	 keyvaluedb.write(key,value);
 	  reply.put("write", value);
 	  reply.put("key", key);
 	  return true;
@@ -88,8 +88,8 @@ static bool write(http::dicomserver::client *client, const rapidjson::Document &
 
    static bool read(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 
-     std::string key = request["key"].GetString();     
-     std::string value = keyvaluedb.read(key);     
+	 std::string key = request["key"].GetString();	   
+	 std::string value = keyvaluedb.read(key);	   
 	  reply.put("read", key);
 	  reply.put("value", value);
 	  return true;
@@ -172,7 +172,7 @@ static bool write(http::dicomserver::client *client, const rapidjson::Document &
 		{ "rpcq", rpcq },
 		{ "ping", ping },
 		{ "echo", echo },
-  		{ "write", write },
+		{ "write", write },
 		{ "read", read },
 		{ "connect", connect },
 		{ "CheckUsername", CheckUsername },

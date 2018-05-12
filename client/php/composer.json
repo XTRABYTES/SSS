@@ -1,0 +1,7 @@
+{
+    "name": "xtrabytes/sss",
+    "require": {
+        "guzzlehttp/guzzle": "^6.3",
+        "shrikeh/teapot": "^2.3"
+    }
+}

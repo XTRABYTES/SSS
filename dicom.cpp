@@ -22,6 +22,19 @@
 #include "payload.hpp"
 
 namespace dicom {
+	class user {
+		public:
+			user(std::string u, std::string p) {
+				username = u;
+				password = p;
+			}
+
+			std::string username;
+			std::string password;
+	};
+
+	std::map<std::string, user*> userlist;
+	
 	struct dicomhandler {
 		std::string method;
 		bool (*actor)(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply);
@@ -44,10 +57,81 @@ namespace dicom {
 		return true;
 	}
 
+	static bool CreateUser(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		bool user_exists = (userlist.count(username) == 1);
+		if (!user_exists) {
+			user *u = new user(username, password);
+			userlist[username] = u;
+		}
+
+		reply.put("username", username);
+		reply.put("usercreated", !user_exists);
+		reply.put("existingusername", user_exists);
+
+		return true;
+	}
+
+	static bool CheckUser(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			return false;
+		}
+
+		user *u = new user("nrocy", "foobarbaz");
+		userlist["nrocy"] = u;
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		bool user_valid = false;
+
+		bool user_exists = (userlist.count(username) == 1);
+		if (user_exists) {
+			user *u = userlist[username];
+			user_valid = (u->username == username) && (u->password == password);
+		}
+
+		reply.put("username", username);
+		reply.put("credentialcheck", user_valid);
+
+		return true;
+	}
+
+	static bool CheckUsername(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		bool user_exists = (userlist.count(username) == 1);
+
+		reply.put("username", username);
+		reply.put("existingusername", user_exists);
+
+		return true;
+	}
+
 	static const struct dicomhandler dicom_handlers[] = {
 		{ "ping", ping },
 		{ "echo", echo },
 		{ "connect", connect },
+		{ "CheckUsername", CheckUsername },
+		{ "CreateUser", CreateUser },
+		{ "CheckUser", CheckUser },
 	};
 
 	std::string exec(http::dicomserver::client *client, const rapidjson::Document &request) {

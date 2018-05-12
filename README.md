@@ -40,7 +40,6 @@ Switch directories and build the binary.
 
 ```
 cd sss
-mkdir build
 make -f makefile.linux
 ```
 

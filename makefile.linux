@@ -21,11 +21,15 @@ LIBS += \
    -l boost_program_options$(BOOST_LIB_SUFFIX) \
    -l boost_thread$(BOOST_LIB_SUFFIX) \
    -l ssl \
+   -l leveldb \
    -l crypto 
 
-CXXFLAGS=-pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter $(DEFS) 
+## debug
+CXXFLAGS=-pthread -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -g $(DEFS)
 
 OBJS= \
+    build/keyvaluedb.o \
+    build/rpcutil.o \
     build/dicom.o \
     build/ssserver.o \
     build/sss-daemon.o \
@@ -39,14 +43,14 @@ all: sss-daemon
 DEFS += -DHAVE_BUILD_INFO
 
 build/%.o: %.cpp
-	$(CXX) -c $(xCXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -MMD -MF $(@:%.o=%.d) -o $@ $<
 	@cp $(@:%.o=%.d) $(@:%.o=%.P); \
 	  sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
 sss-daemon: $(OBJS:build/%=build/%)
-	$(LINK) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) $(LIBS)
+	$(LINK) $(CXXFLAGS) -o $@ $^ $(LDFLAGS) -g $(LIBS)
 
 clean:
 	-rm -f sss-daemon

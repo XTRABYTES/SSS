@@ -12,12 +12,15 @@
 
 #include <iostream>
 #include <string>
+#include <exception>
 #include <boost/algorithm/string.hpp>
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 
 #include <rapidjson/document.h>
 
+#include "rpcutil.hpp"
+#include "keyvaluedb.hpp"
 #include "ssserver.hpp"
 #include "payload.hpp"
 
@@ -40,6 +43,28 @@ namespace dicom {
 		bool (*actor)(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply);
 	};
 
+	static bool rpcq(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+	  
+	  boost::asio::io_service ios;
+	  boost::property_tree::ptree rpcreply;
+	  
+     rpcutil::client c( ios );
+     c.connect( "localhost:4434", "xfuelrpc", "pw123" );
+              
+     rpcreply = c.rpcquery(request["params"].GetString());
+     
+     
+     
+     std::stringstream rpcrepss;
+     try {
+            boost::property_tree::write_json(rpcrepss, rpcreply);
+     }  catch (std::exception& e)  {
+     	  rpcrepss << "bad rpc reply error";
+     }	
+     reply.put("rpcreply", rpcrepss.str() );
+	  return true;
+   }
+
 	static bool ping(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("ping", "pong");
 		return true;
@@ -51,6 +76,24 @@ namespace dicom {
 		return true;
 	}
 
+static bool write(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+     
+     std::string value = request["value"].GetString();          
+     std::string key = keyvaluedb.getkey(value);
+     keyvaluedb.write(key,value);
+	  reply.put("write", value);
+	  reply.put("key", key);
+	  return true;
+   }
+
+   static bool read(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+
+     std::string key = request["key"].GetString();     
+     std::string value = keyvaluedb.read(key);     
+	  reply.put("read", key);
+	  reply.put("value", value);
+	  return true;
+   }
 	static bool connect(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("session_id", client->session_id);
 		reply.put("pubkey", client->server_keys.pub);
@@ -126,8 +169,11 @@ namespace dicom {
 	}
 
 	static const struct dicomhandler dicom_handlers[] = {
+		{ "rpcq", rpcq },
 		{ "ping", ping },
 		{ "echo", echo },
+  		{ "write", write },
+		{ "read", read },
 		{ "connect", connect },
 		{ "CheckUsername", CheckUsername },
 		{ "CreateUser", CreateUser },

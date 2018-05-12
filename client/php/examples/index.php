@@ -3,8 +3,8 @@
 require_once __DIR__.'/../vendor/autoload.php';
 require_once __DIR__.'/../lib/DICOM/Client.php';
 
-const HOST = '172.16.144.132';
-const PORT = 8080;
+const HOST = 'sss.xtrabytes.services';
+const PORT = 8443;
 
 $client = new DICOM\Client(HOST, PORT);
 $client->connect();

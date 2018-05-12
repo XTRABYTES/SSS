@@ -803,7 +803,6 @@ namespace http {
 
 			std::string payload = reqpt.get("payload", "");
 			std::string signature = reqpt.get("signature", "");
-			std::string pubkey = reqpt.get("pubkey", "");
 
 			// parse out the payload
 			rapidjson::Document request;
@@ -831,9 +830,6 @@ namespace http {
 						throw std::invalid_argument("missing pubkey");
 					}
 
-					pubkey = request["pubkey"].GetString();
-
-					// TODO: generate new keypair
 					// TODO: check for existing sessions before overwriting (pubkey differs)
 
 					boost::uuids::random_generator session_generator;
@@ -841,7 +837,12 @@ namespace http {
 
 					std::string session_id = to_string(sid);
 
-					client = new ::http::dicomserver::client(session_id, pubkey);
+					payload::keypair keypair;
+					payload::generate_keypair(keypair);
+
+					client = new ::http::dicomserver::client(session_id, request["pubkey"].GetString(), keypair);
+
+					// TODO: class for this with mutex
 					clients[session_id] = client;
 
 					std::cout << "new client session: " << client->session_id << std::endl;
@@ -857,14 +858,14 @@ namespace http {
 						throw std::invalid_argument("invalid session");
 					}
 
+					// TODO: class for this with mutex
 					client = clients[session_id];
-					pubkey = client->pubkey;
-					std::cout << "using pubkey for session: " << session_id << std::endl << pubkey << std::endl;
+					std::cout << "using pubkey for session: " << session_id << std::endl;
 				}
 
 
 				// verify signature
-				if (!payload::verify_signature(payload, signature, pubkey)) {
+				if (!payload::verify_signature(payload, signature, client->client_pubkey)) {
 					throw std::invalid_argument("invalid signature");
 				}
 			}  catch (std::exception& e)  {

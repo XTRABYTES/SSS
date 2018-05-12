@@ -24,6 +24,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/property_tree/ptree.hpp>
 
+#include "payload.hpp"
 
 namespace http {
 	namespace dicomserver {
@@ -235,13 +236,15 @@ namespace http {
 
 		class client {
 			public:
-				client(std::string sid, std::string pk) {
+				client(std::string sid, std::string cpubkey, payload::keypair skeys) {
 					session_id = sid;
-					pubkey = pk;
+					client_pubkey = cpubkey;
+					server_keys = skeys;
 				}
 
 				std::string session_id;
-				std::string pubkey;
+				std::string client_pubkey;
+				payload::keypair server_keys;
 		};
 
 		typedef boost::shared_ptr<connection> connection_ptr;

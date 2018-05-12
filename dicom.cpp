@@ -40,7 +40,7 @@ namespace dicom {
 
 	static bool connect(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("session_id", client->session_id);
-		reply.put("pubkey", payload::sss_pubkey);
+		reply.put("pubkey", client->server_keys.pub);
 		return true;
 	}
 
@@ -78,7 +78,7 @@ namespace dicom {
 		// fix property_tree compact write_json bug: https://svn.boost.org/trac10/ticket/121490
 		boost::trim_right(data);
 
-		char *signature = payload::generate_signature(data, payload::sss_privkey);
+		char *signature = payload::generate_signature(data, client->server_keys.priv);
 
 		boost::property_tree::ptree res;
 		res.put("dicom", "1.0");

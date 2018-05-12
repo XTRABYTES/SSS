@@ -16,7 +16,7 @@ The XTRABYTES DICOM API is your gateway to the XTRABYTES core. Using an API, you
 Install prerequisites.
 
 ```
-sudo apt install git build-essential libboost-all-dev libssl-dev curl
+sudo apt install git build-essential libboost-all-dev libssl-dev curl libleveldb-dev
 ```
 
 Install rapidjson (we'll get better instructions)

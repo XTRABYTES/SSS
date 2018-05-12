@@ -1,0 +1,16 @@
+{
+  "name": "dicom",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "node-fetch": "^2.1.2",
+    "pem": "^1.12.5",
+    "ursa": "^0.9.4"
+  }
+}

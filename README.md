@@ -76,6 +76,47 @@ The API should be considered pre-alpha and almost certainly will change signific
 
 Refer to the client libraries for insight into the capabilities of the API, documentation will be released once the API has stabilised.
 
+#### Installation
+
+Intended only for production environments, unnecessary for development.
+
+Modify the paths in `systemd` and `rsyslog` configuration files to match your environment.
+
+Copy the configuration into place:
+
+```
+$ sudo cp support/systemd/sss-daemon.service /etc/systemd/system/
+$ sudo cp support/rsyslogd/sss-daemon.conf /etc/rsyslog.d/
+```
+
+Restart services
+
+```
+$ sudo systemctl restart rsyslog
+$ sudo systemctl restart sss-daemon
+```
+
+Check the daemon is running
+
+```
+$ sudo systemctl status sss-daemon
+
+● sss-daemon.service - SSS daemon
+   Loaded: loaded (/etc/systemd/system/sss-daemon.service; disabled; vendor preset: enabled)
+   Active: active (running) since Sun 2018-05-13 14:23:30 BST; 12min ago
+ Main PID: 96520 (sss-daemon)
+    Tasks: 11 (limit: 19660)
+   CGroup: /system.slice/sss-daemon.service
+           └─96520 /home/xtrabytes/sss/sss-daemon
+
+May 13 14:23:30 debian systemd[1]: Started SSS daemon.
+May 13 14:23:30 debian sss-daemon[96520]: SSS daemon startup on 0.0.0.0:8080 with 10 threads
+```
+
+
+
+
+
 #### Contributing
 
 Code-style is TBD, but for now:

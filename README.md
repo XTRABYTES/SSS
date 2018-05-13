@@ -6,11 +6,11 @@ The XTRABYTES DICOM API is your gateway to the XTRABYTES core. Using an API, you
 
 **Overview of DICOM, SSS and the XTRABYTES Testnet**
 
-![sss testnet overview](https://user-images.githubusercontent.com/17502298/39838169-8879c0b8-53a6-11e8-8f1a-857b29cef76c.png)
+![sss testnet overview](https://user-images.githubusercontent.com/36036056/39969530-e265ebf2-56d4-11e8-8df6-7c49f6c7637a.png)
 
 **(Future implementation) Overview of DICOM, the STATIC network and the XTRABYTES Mainnet**
 
-![sss mainnet overview](https://user-images.githubusercontent.com/17502298/39838220-b8737d0e-53a6-11e8-9483-33838869dd78.png)
+![sss mainnet overview](https://user-images.githubusercontent.com/36036056/39969536-fcb9733e-56d4-11e8-8764-4675e42da07c.png)
 
 ## Getting Started
 

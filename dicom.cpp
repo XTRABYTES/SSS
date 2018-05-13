@@ -71,13 +71,15 @@ namespace dicom {
 	}
 
 	static bool echo(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-		// TODO: param checks
+		if (!request.HasMember("params")) {
+			return false;
+		}
+
 		reply.put("echo", request["params"].GetString());
 		return true;
 	}
 
 	static bool write(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-
 		std::string value = request["value"].GetString();			
 		std::string key = keyvaluedb.getkey(value);
 		keyvaluedb.write(key,value);
@@ -87,7 +89,6 @@ namespace dicom {
 	}
 
 	static bool read(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-
 		std::string key = request["key"].GetString();	   
 		std::string value = keyvaluedb.read(key);	   
 		reply.put("read", key);

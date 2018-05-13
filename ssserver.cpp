@@ -777,47 +777,42 @@ namespace http {
 				return;
 			}
 
-
 			boost::property_tree::ptree reqpt;
-			std::stringstream reqss;
-
-
-
-			try  {
-				reqss << req.content;
-
-				boost::property_tree::read_json(reqss, reqpt);  
-
-				std::stringstream ss;
-				ss << reqpt.get<std::string>("dicom");          
-				if (ss.str().compare("1.0")) {
-					rep = reply::stock_reply(reply::bad_request);
-					return;    
-				}
-
-			}  catch (std::exception& e)  {
-				std::cout << e.what() << std::endl;
-				rep = reply::stock_reply(reply::bad_request);
-				return;        
-			}   
-
-			std::string payload = reqpt.get("payload", "");
-			std::string signature = reqpt.get("signature", "");
-
-			// parse out the payload
 			rapidjson::Document request;
-			request.Parse(payload.c_str());
-
 			client *client = NULL;
 
-			// Temporary basic sanity checking 
-			try {
-				if (signature == "") {
+			try  {
+				std::stringstream reqss;
+				reqss << req.content;
+
+				try {
+					boost::property_tree::read_json(reqss, reqpt);  
+				} catch (boost::property_tree::json_parser::json_parser_error &e) {
+					throw std::invalid_argument("bad request");
+				}
+
+				std::string dicom = reqpt.get("dicom", "");
+				if (dicom != "1.0") {
+					throw std::invalid_argument("bad dicom version");
+				}
+
+				std::string payload = reqpt.get("payload", "");
+				if (payload == "") {
 					throw std::invalid_argument("missing payload");
 				}
 
+				std::string signature = reqpt.get("signature", "");
 				if (signature == "") {
 					throw std::invalid_argument("missing signature");
+				}
+
+				// parse out the payload
+				if (request.Parse(payload.c_str()).HasParseError()) {
+					throw std::invalid_argument("invalid payload");
+				}
+				
+				if (!request.IsObject()) {
+					throw std::invalid_argument("invalid payload");
 				}
 
 				if (!request.HasMember("method")) {
@@ -855,7 +850,7 @@ namespace http {
 
 					if (clients.count(session_id) == 0) {
 						// TODO: Handle by telling the client to establish a new connection
-						throw std::invalid_argument("invalid session");
+						throw std::invalid_argument("invalid session_id");
 					}
 
 					// TODO: class for this with mutex
@@ -863,12 +858,11 @@ namespace http {
 					std::cout << "using pubkey for session: " << session_id << std::endl;
 				}
 
-
 				// verify signature
 				if (!payload::verify_signature(payload, signature, client->client_pubkey)) {
 					throw std::invalid_argument("invalid signature");
 				}
-			}  catch (std::exception& e)  {
+			} catch (std::exception& e) {
 				// TODO: temporary error state for debugging
 				boost::property_tree::ptree res;		   
 				res.put("dicom", "1.0");
@@ -883,10 +877,11 @@ namespace http {
 				rep.headers.push_back(header("Content-Length",
 							boost::lexical_cast<std::string>(rep.content.size())));
 				rep.headers.push_back(header("Content-Type", "application/json"));
+
 				return;
 			}   
 
-			std::cout << "client count: " << clients.size() << std::endl;
+			std::cout << "client count now: " << clients.size() << std::endl;
 
 			// Fill out the reply to be sent to the client.
 			rep.status = reply::ok;
@@ -896,14 +891,15 @@ namespace http {
 
 			rep.headers.push_back(header("Date",
 						FormatTime("%a, %d %b %Y %H:%M:%S GMT", req.tstamp)));
-			rep.headers.push_back(header(		"Server", "DICOM/V1.0" ));
+			rep.headers.push_back(header("Server", "DICOM/V1.0"));
 			rep.headers.push_back(header("Content-Length",
 						boost::lexical_cast<std::string>(rep.content.size())));
 			rep.headers.push_back(header("Content-Type", "application/json"));
-			if (keepalive)
+			if (keepalive) {
 				rep.headers.push_back(header("Connection", "Keep-Alive"));
-			else
+			} else {
 				rep.headers.push_back(header("Connection", "close"));
+			}
 		}
 
 		bool request_handler::url_decode(const std::string& in, std::string& out)

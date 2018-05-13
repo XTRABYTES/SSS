@@ -21,13 +21,9 @@ namespace payload {
 	}
 
 	bool generate_keypair(keypair &keypair) {
-		RSA *rsa = NULL;
-		EVP_PKEY *evpkey = NULL;
-		BIGNUM *bne = NULL;
-		BIO *pubkey = NULL, *privkey = NULL;
-
 		int ret = 0;
 
+		BIGNUM *bne = NULL;
 		bne = BN_new();
 		ret = BN_set_word(bne, RSA_F4);
 		if (ret != 1) {
@@ -36,6 +32,7 @@ namespace payload {
 			return false;
 		}
 
+		RSA *rsa = NULL;
 		rsa = RSA_new();
 		ret = RSA_generate_key_ex(rsa, 2048, bne, NULL);
 		if (ret != 1) {
@@ -45,16 +42,26 @@ namespace payload {
 			return false;
 		}
 
+		EVP_PKEY *evpkey = NULL;
 		evpkey = EVP_PKEY_new();
 		ret = EVP_PKEY_assign_RSA(evpkey, rsa);
+		if (ret != 1) {
+			return false;
+		}
 
-		// TODO: errors
+		BIO *privkey = NULL;
 		privkey = BIO_new(BIO_s_mem());
-		PEM_write_bio_PrivateKey(privkey, evpkey, NULL, NULL, 0, NULL, NULL);
+		ret = PEM_write_bio_PrivateKey(privkey, evpkey, NULL, NULL, 0, NULL, NULL);
+		if (ret != 1) {
+			return false;
+		}
 
-		// TODO: errors
+		BIO *pubkey = NULL;
 		pubkey = BIO_new(BIO_s_mem());
 		PEM_write_bio_PUBKEY(pubkey, evpkey);
+		if (ret != 1) {
+			return false;
+		}
 
 		BUF_MEM *pubmem = NULL;
 		BIO_get_mem_ptr(pubkey, &pubmem);
@@ -64,7 +71,7 @@ namespace payload {
 		BIO_get_mem_ptr(privkey, &privmem);
 		keypair.priv.assign(privmem->data, privmem->data + privmem->length);
 
-		// TODO: better clenaup
+		// TODO: better cleanup
 		BIO_free_all(pubkey);
 		BIO_free_all(privkey);
 		EVP_PKEY_free(evpkey);
@@ -165,15 +172,24 @@ namespace payload {
 			size_t MsgLen, 
 			bool* Authentic) {
 		*Authentic = false;
+
 		EVP_PKEY* pubKey  = EVP_PKEY_new();
-		EVP_PKEY_assign_RSA(pubKey, rsa);
+		int res = EVP_PKEY_assign_RSA(pubKey, rsa);
+
+		if (res != 1) {
+			return false;
+		}
+
 		EVP_MD_CTX* m_RSAVerifyCtx = EVP_MD_CTX_create();
+
 		if (EVP_DigestVerifyInit(m_RSAVerifyCtx,NULL, EVP_sha256(),NULL,pubKey)<=0) {
 			return false;
 		}
+
 		if (EVP_DigestVerifyUpdate(m_RSAVerifyCtx, Msg, MsgLen) <= 0) {
 			return false;
 		}
+
 		int AuthStatus = EVP_DigestVerifyFinal(m_RSAVerifyCtx, MsgHash, MsgHashLen);
 		if (AuthStatus==1) {
 			*Authentic = true;

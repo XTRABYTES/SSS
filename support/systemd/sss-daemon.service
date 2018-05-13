@@ -1,0 +1,15 @@
+[Unit]
+Description=XTRABYTES SSS daemon
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/xtrabytes/sss
+ExecStart=/home/xtrabytes/sss/sss-daemon
+StandardOutput=syslog
+StandardError=syslog
+Restart=always
+RestartSec=1
+
+[Install]
+WantedBy=multi-user.target

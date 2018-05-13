@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 	setlocale(LC_ALL, "");
 
 	try {
+		std::cout << "SSS daemon startup on " << bind_addr << ":" << bind_port <<  " with " << n_threads << " threads" << std::endl;
 		std::size_t num_threads = boost::lexical_cast<std::size_t>(n_threads);
 		http::dicomserver::server s(bind_addr, bind_port, doc_root, num_threads);
 		s.run();

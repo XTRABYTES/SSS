@@ -33,9 +33,8 @@ namespace DICOMClient.DICOM
             {
                 try
                 {
-                    // TODO Change signature verification to imitate or implement OpenSSL
-                    PublicKey = rsaProvider.Decode(false);
-                    PrivateKey = rsaProvider.Decode(true);
+                    PrivateKey = RSAKeyUtilities.ExportPrivateKey(rsaProvider);
+                    PublicKey = RSAKeyUtilities.ExportPublicKey(rsaProvider);
                 }
                 finally
                 {
@@ -100,14 +99,15 @@ namespace DICOMClient.DICOM
 
         private async Task<string> Execute(Dictionary<string, object> parameters)
         {
+            Console.WriteLine("Sending request to SSS...");
+
             if (!string.IsNullOrWhiteSpace(SessionId))
             {
                 parameters["session_id"] = SessionId;
             }
 
             var payload = JsonConvert.SerializeObject(parameters);
-            // TODO Sign the payload.
-            var pemSignature = string.Empty;
+            var pemSignature = RSAKeyUtilities.SignData(payload, PrivateKey);
 
             var request = new Dictionary<string, object>()
             {
@@ -120,19 +120,31 @@ namespace DICOMClient.DICOM
             var data = JsonConvert.SerializeObject(request);
 
             var content = new StringContent(data, Encoding.UTF8, "application/json");
-            var result = await WebClient.PostAsync(Endpoint, content);
+            var postResult = await WebClient.PostAsync(Endpoint, content);
+            var result = string.Empty;
 
-            var responseData = (JObject)JsonConvert.DeserializeObject(result.Content.ToString());
-            VerifySignature(responseData);
+            if (postResult.IsSuccessStatusCode)
+            {
+                var responseData = (JObject)JsonConvert.DeserializeObject(postResult.Content.ToString());
+                VerifySignature(responseData);
 
-            return responseData["payload"].Value<string>();
+                result = responseData["payload"].Value<string>();
+            }
+            else
+            {
+                result = string.Format("Something went wrong.\nDetails: {0}", postResult.ToString());
+            }
+
+            Console.WriteLine(result);
+            return result;
         }
 
         private bool VerifySignature(JObject data)
         {
             // TODO Ensure fields exist
 
-            var payload = (JObject)JsonConvert.DeserializeObject(data["payload"].Value<string>());
+            var payloadString = data["payload"].Value<string>();
+            var payload = (JObject)JsonConvert.DeserializeObject(payloadString);
             var signature = data["signature"].Value<string>();
 
             if (payload["method"].Value<string>() == "connect")
@@ -141,19 +153,9 @@ namespace DICOMClient.DICOM
                 SessionId = payload["session_id"].Value<string>();
             }
 
-            using (var rsaProvider = new RSACryptoServiceProvider(1024))
-            {
-                try
-                {
-                    // TODO Change signature verification to imitate or implement OpenSSL
-                    var isValid = (rsaProvider.VerifyHash(Convert.FromBase64String(payload.Value<string>()), HASHING_ALGORITHM, Convert.FromBase64String(signature)));
-                    return isValid;
-                }
-                finally
-                {
-                    rsaProvider.PersistKeyInCsp = false;
-                }
-            }
+            // This signature verification hasn't been tested yet and might not work.
+            var isValid = RSAKeyUtilities.VerifyData(payloadString, HASHING_ALGORITHM, signature, PublicKey);
+            return isValid;
         }
     }
 }

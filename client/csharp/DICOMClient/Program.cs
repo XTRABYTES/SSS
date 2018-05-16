@@ -14,6 +14,8 @@ namespace DICOMClient
             client.Connect().Wait();
 
             // TODO Add remaining tests.
+
+            Console.ReadLine();
         }
     }
 }

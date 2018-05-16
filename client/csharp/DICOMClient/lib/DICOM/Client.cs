@@ -86,7 +86,7 @@ namespace DICOMClient.DICOM
             return await Execute(new Dictionary<string, object>() {
                 { "method", "CreateUser" },
                 { "username", username },
-                { "username", password }
+                { "password", password }
             });
         }
 
@@ -95,21 +95,19 @@ namespace DICOMClient.DICOM
             return await Execute(new Dictionary<string, object>() {
                 { "method", "CheckUser" },
                 { "username", username },
-                { "username", password }
+                { "password", password }
             });
         }
 
         private async Task<string> Execute(Dictionary<string, object> parameters)
         {
-            Console.WriteLine("Sending request to SSS...");
-
             if (!string.IsNullOrWhiteSpace(SessionId))
             {
                 parameters["session_id"] = SessionId;
             }
 
             var payload = JsonConvert.SerializeObject(parameters);
-            var pemSignature = RSAKeyUtilities.SignData(payload, PrivateKey);
+            var pemSignature = RSAKeyUtilities.ExportSignature(RSAKeyUtilities.SignData(payload, PrivateKey));
 
             var request = new Dictionary<string, object>()
             {
@@ -143,26 +141,32 @@ namespace DICOMClient.DICOM
                 result = string.Format("SSS returned an unexpected response: {0}", postResult.ToString());
             }
 
-            Console.WriteLine(result);
             return result;
         }
 
         private bool VerifySignature(JObject data)
         {
-            // TODO Ensure fields exist
+            var isValid = false;
 
-            var payloadString = data["payload"].Value<string>();
-            var payload = (JObject)JsonConvert.DeserializeObject(payloadString);
-            var signature = data["signature"].Value<string>();
-
-            if (payload["method"].Value<string>() == "connect")
+            if (data.ContainsKey("payload")
+                && data.ContainsKey("signature"))
             {
-                ServerPublicKey = payload["pubkey"].Value<string>();
-                SessionId = payload["session_id"].Value<string>();
-            }
+                var payloadJson = (string)data["payload"];
+                var parsedPayload = JObject.Parse(payloadJson);
+                var signature = (string)data["signature"];
 
-            // TODO: FIXME - This fails to very the signature from the server but works in everything else
-            var isValid = RSAKeyUtilities.VerifyData(payloadString, HASHING_ALGORITHM, signature, PublicKey);
+                if (parsedPayload.ContainsKey("method") 
+                    && (string)parsedPayload["method"] == "connect"
+                    && parsedPayload.ContainsKey("pubkey")
+                    && parsedPayload.ContainsKey("session_id"))
+                {
+                    ServerPublicKey = (string)parsedPayload["pubkey"];
+                    SessionId = (string)parsedPayload["session_id"];
+                }
+
+                isValid = RSAKeyUtilities.VerifyData(payloadJson, HASHING_ALGORITHM, signature, ServerPublicKey);
+            }
+            
             return isValid;
         }
     }

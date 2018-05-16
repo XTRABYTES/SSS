@@ -6,13 +6,14 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace DICOMClient.Cryptography
 {
     public class RSAKeyUtilities
     {
         /// <summary>
-        /// Import OpenSSH PEM private key string into MS RSACryptoServiceProvider
+        /// Import OpenSSL PEM private key string into MS RSACryptoServiceProvider
         /// </summary>
         /// <param name="pem"></param>
         /// <returns></returns>
@@ -28,7 +29,7 @@ namespace DICOMClient.Cryptography
         }
 
         /// <summary>
-        /// Import OpenSSH PEM public key string into MS RSACryptoServiceProvider
+        /// Import OpenSSL PEM public key string into MS RSACryptoServiceProvider
         /// </summary>
         /// <param name="pem"></param>
         /// <returns></returns>
@@ -91,7 +92,7 @@ namespace DICOMClient.Cryptography
         }
 
         /// <summary>
-        /// Export public key from MS RSACryptoServiceProvider into OpenSSH PEM string
+        /// Export public key from MS RSACryptoServiceProvider into OpenSSL PEM string
         /// slightly modified from https://stackoverflow.com/a/28407693
         /// </summary>
         /// <param name="csp"></param>
@@ -153,20 +154,27 @@ namespace DICOMClient.Cryptography
             return outputStream.ToString();
         }
 
-        public static string SignData(string message, string privateKey)
+        /// <summary>
+        /// Generate an OpenSSL PEM signature of binary data using an OpenSSL PEM private key
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="privateKey"></param>
+        /// <returns></returns>
+        public static byte[] SignData(string message, string privateKey)
         {
-            //// The array to store the signed message in bytes
-            byte[] signedBytes;
+            // The array to store the signed message in bytes
+            byte[] signature;
+
             using (var rsa = ImportPrivateKey(privateKey))
             {
-                //// Write the message to a byte array using UTF8 as the encoding.
+                // Write the message to a byte array using UTF8 as the encoding.
                 var encoder = new UTF8Encoding();
                 byte[] originalData = encoder.GetBytes(message);
 
                 try
                 {
-                    //// Sign the data, using SHA256 as the hashing algorithm 
-                    signedBytes = rsa.SignData(originalData, CryptoConfig.MapNameToOID("SHA256"));
+                    // Sign the data, using SHA256 as the hashing algorithm 
+                    signature = rsa.SignData(originalData, CryptoConfig.CreateFromName("SHA256"));
                 }
                 catch (CryptographicException e)
                 {
@@ -175,12 +183,28 @@ namespace DICOMClient.Cryptography
                 }
                 finally
                 {
-                    //// Set the keycontainer to be cleared when rsa is garbage collected.
+                    // Set the keycontainer to be cleared when rsa is garbage collected.
                     rsa.PersistKeyInCsp = false;
                 }
             }
-            //// Convert the a base64 string before returning
-            return Convert.ToBase64String(signedBytes);
+            return signature;
+        }
+
+        /// <summary>
+        /// Convert signature to a PEM-style string including newline characters.
+        /// </summary>
+        /// <param name="signatureBytes"></param>
+        /// <returns></returns>
+        public static string ExportSignature(byte[] signatureBytes)
+        {
+            StringWriter outputStream = new StringWriter();
+            var base64 = Convert.ToBase64String(signatureBytes).ToCharArray();
+            for (var i = 0; i < base64.Length; i += 64)
+            {
+                outputStream.Write(base64, i, Math.Min(64, base64.Length - i));
+                outputStream.Write("\n");
+            }
+            return outputStream.ToString();
         }
 
         public static bool VerifyData(string data, string hashingAlgorithm, string messageSignature, string publicKey)
@@ -190,6 +214,8 @@ namespace DICOMClient.Cryptography
             {
                 var encoder = new UTF8Encoding();
                 byte[] bytesToVerify = encoder.GetBytes(data);
+                // Remove new line characters before verifying data
+                //messageSignature = Regex.Replace(messageSignature, @"\t|\n|\r", "");
                 byte[] signature = Convert.FromBase64String(messageSignature);
 
                 try

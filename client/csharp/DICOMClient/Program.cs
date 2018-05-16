@@ -8,14 +8,24 @@ namespace DICOMClient
         const string HOST = "sss.xtrabytes.services";
         const int PORT = 8443;
 
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var client = new DICOM.Client(HOST, PORT);
-            client.Connect().Wait();
+            string result;
 
-            // TODO Add remaining tests.
+            result = await client.Connect();
+            Console.WriteLine(result);
 
-            Console.ReadLine();
+            result = await client.CreateUser("danny", "foobarbaz");
+            Console.WriteLine(result);
+
+            result = await client.CheckUsername("danny");
+            Console.WriteLine(result);
+
+            result = await client.CheckUser("danny", "foobarbaz");
+            Console.WriteLine(result);
+
+            Console.ReadKey();
         }
     }
 }

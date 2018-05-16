@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using DICOMClient.Cryptography;
+using System.Net;
 
 namespace DICOMClient.DICOM
 {
@@ -46,6 +47,7 @@ namespace DICOMClient.DICOM
             httpClientHandler.ServerCertificateCustomValidationCallback = (message, cert, chain, errors) => { return true; };
             WebClient = new HttpClient(httpClientHandler);
             WebClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            System.Net.ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls;
         }
 
         public async Task<string> Connect()
@@ -123,16 +125,22 @@ namespace DICOMClient.DICOM
             var postResult = await WebClient.PostAsync(Endpoint, content);
             var result = string.Empty;
 
-            if (postResult.IsSuccessStatusCode)
-            {
-                var responseData = (JObject)JsonConvert.DeserializeObject(postResult.Content.ToString());
-                VerifySignature(responseData);
+            var resultJson = await postResult.Content.ReadAsStringAsync();
+            JObject parsedJson = JObject.Parse(resultJson);
 
-                result = responseData["payload"].Value<string>();
+            if (parsedJson.ContainsKey("payload"))
+            {
+                var resultPayload = (string)parsedJson["payload"];
+                VerifySignature(parsedJson);
+                result = resultPayload;
+            }
+            else if (parsedJson.ContainsKey("error"))
+            {
+                result = string.Format("SSS responded with an error: {0}", (string)parsedJson["error"]);
             }
             else
             {
-                result = string.Format("Something went wrong.\nDetails: {0}", postResult.ToString());
+                result = string.Format("SSS returned an unexpected response: {0}", postResult.ToString());
             }
 
             Console.WriteLine(result);
@@ -153,7 +161,7 @@ namespace DICOMClient.DICOM
                 SessionId = payload["session_id"].Value<string>();
             }
 
-            // This signature verification hasn't been tested yet and might not work.
+            // TODO: FIXME - This fails to very the signature from the server but works in everything else
             var isValid = RSAKeyUtilities.VerifyData(payloadString, HASHING_ALGORITHM, signature, PublicKey);
             return isValid;
         }

@@ -1,3 +1,5 @@
+![sss_update_github](https://user-images.githubusercontent.com/17502298/40388445-9047dc26-5ddd-11e8-94e8-8bb45386926c.png)
+
 # STATIC Simulation System (SSS)
 
 **Important Note: Currently this repository only contains a simple request/response example. Additional API functions will be added as soon as they are ready.**

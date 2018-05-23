@@ -37,7 +37,8 @@ OBJS= \
     build/key.o \
     build/util.o \
     build/hash.o \
-    build/base58.o
+    build/base58.o \
+    build/tx.o
 
 all: sss-daemon
 

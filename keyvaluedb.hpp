@@ -8,19 +8,18 @@
 
 class KeyValueDB {
 private:
-    
-    leveldb::Options options;
-    leveldb::WriteOptions writeOptions;    
-    leveldb::DB *kvdb;
+	leveldb::Options options;
+	leveldb::WriteOptions writeOptions;    
+	leveldb::DB *kvdb;
 
 public:
-    KeyValueDB();
-    ~KeyValueDB();
-    bool write(std::string &key, std::string &value);
-    std::string read(std::string &key );
-    std::string getkey(std::string &value );
-
-
+	KeyValueDB();
+	~KeyValueDB();
+	bool write(std::string &key, std::string &value);
+	std::string read(std::string &key);
+	bool read(std::string &key, std::string &value);
+	std::string getkey(std::string &value);
+	bool exists(std::string &key);
 };
 
 extern KeyValueDB keyvaluedb;

@@ -53,8 +53,6 @@ namespace dicom {
 
 		rpcreply = c.rpcquery(request["params"].GetString());
 
-
-
 		std::stringstream rpcrepss;
 		try {
 			boost::property_tree::write_json(rpcrepss, rpcreply);
@@ -95,6 +93,7 @@ namespace dicom {
 		reply.put("value", value);
 		return true;
 	}
+
 	static bool connect(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		reply.put("session_id", client->session_id);
 		reply.put("pubkey", client->server_keys.pub);
@@ -169,6 +168,92 @@ namespace dicom {
 		return true;
 	}
 
+	static bool user_create(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			reply.put("message", "username required");
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			reply.put("message", "password required");
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		if (password.length() < 8) {
+			reply.put("message", "password must be more than 8 characters");
+			return false;
+		}
+
+		std::string key = "user:" + username + password + ":xby";
+		std::string value = "";
+
+		std::string hash = keyvaluedb.getkey(key);
+
+		if (keyvaluedb.exists(hash)) {
+			reply.put("message", "username exists");
+			return false;
+		}
+
+		keyvaluedb.write(hash, value);
+
+		return true;
+	}
+
+	static bool user_login(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			reply.put("message", "username required");
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			reply.put("message", "password required");
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		std::string key = "user:" + username + password + ":xby";
+		std::string hash = keyvaluedb.getkey(key);
+
+		std::string private_key; 
+		if (!keyvaluedb.read(hash, private_key)) {
+			reply.put("message", "user not found");
+			return false;
+		}
+
+		client->set_userhash(hash);
+		reply.put("username", username);
+		reply.put("key", private_key);
+
+		return true;
+	}
+
+	static bool privatekey_import(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!client->is_logged_in()) {
+			reply.put("message", "login required");
+			return false;
+		}
+
+		if (!request.HasMember("key")) {
+			reply.put("message", "key required");
+			return false;
+		}
+
+		std::string private_key = request["key"].GetString();
+		boost::algorithm::trim(private_key);
+
+		std::string key = client->get_userhash();
+		keyvaluedb.write(key, private_key);
+
+		reply.put("key", private_key);
+
+		return true;
+	}
+
 	static const struct dicomhandler dicom_handlers[] = {
 		{ "rpcq", rpcq },
 		{ "ping", ping },
@@ -179,6 +264,11 @@ namespace dicom {
 		{ "CheckUsername", CheckUsername },
 		{ "CreateUser", CreateUser },
 		{ "CheckUser", CheckUser },
+
+		// refactored 
+		{ "privatekey.import", privatekey_import },
+		{ "user.create", user_create },
+		{ "user.login", user_login },
 	};
 
 	std::string exec(http::dicomserver::client *client, const rapidjson::Document &request) {

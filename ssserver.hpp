@@ -242,9 +242,25 @@ namespace http {
 					server_keys = skeys;
 				}
 
+				void set_userhash(const std::string &userhash) {
+					this->userhash = userhash;
+				}
+
+				const std::string& get_userhash() {
+					return userhash;
+				}
+
+				bool is_logged_in() {
+					return userhash != "";
+				}
+
 				std::string session_id;
 				std::string client_pubkey;
 				payload::keypair server_keys;
+
+			private:
+				std::string userhash;
+
 		};
 
 		typedef boost::shared_ptr<connection> connection_ptr;

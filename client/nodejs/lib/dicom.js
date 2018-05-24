@@ -73,8 +73,6 @@ DICOM.prototype.execute = function(params) {
 		return res.text();
 	}).then(body => {
 		const data = JSON.parse(body);
-
-		// This doesn't work yet, not sure why - same data works in PHP.
 		this.verifySignature(data);
 
 		return JSON.parse(data.payload);
@@ -90,13 +88,10 @@ DICOM.prototype.verifySignature = function(data) {
 		this.sessionId = payload.session_id;
 	}
 
-	const signature = data.signature.split('\n').join('');
-
-	// TODO: FIXME - this fails to verify the signature from the server, works in everything else. loljs?
-	const isValid = this.serverPublicKey.hashAndVerify('sha256', data.payload, signature, 'base64');
-	//if (!isValid) {
-		//throw 'invalid payload signature';
-	//}
+	const isValid = this.serverPublicKey.hashAndVerify('sha256', Buffer.from(data.payload, 'utf-8'), data.signature, 'base64');
+	if (!isValid) {
+		throw 'invalid payload signature';
+	}
 };
 
 exports.client = (host, port) => {

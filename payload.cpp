@@ -5,6 +5,7 @@
 #include <openssl/rsa.h>
 #include <openssl/pem.h>
 
+#include "base64.hpp"
 #include "payload.hpp"
 
 namespace payload {
@@ -84,6 +85,7 @@ namespace payload {
 			size_t MsgLen,
 			unsigned char** EncMsg, 
 			size_t* MsgLenEnc) {
+
 		EVP_MD_CTX* m_RSASignCtx = EVP_MD_CTX_create();
 		EVP_PKEY* priKey  = EVP_PKEY_new();
 		EVP_PKEY_assign_RSA(priKey, rsa);
@@ -105,6 +107,7 @@ namespace payload {
 		return true;
 	}
 
+	/*
 	void Base64Encode( const unsigned char* buffer, 
 			size_t length, 
 			char** base64Text) { 
@@ -120,16 +123,35 @@ namespace payload {
 		BIO_free_all(bio);
 		*base64Text=(*bufferPtr).data;
 	}
+	*/
 
-	char* generate_signature(std::string plainText, std::string privateKey) {
+	std::string generate_signature(std::string plainText, std::string privateKey) {
 		RSA* privateRSA = createPrivateRSA(privateKey);
-		unsigned char* encMessage;
-		char* base64Text;
-		size_t encMessageLength;
-		RSASign(privateRSA, (unsigned char*) plainText.c_str(), plainText.length(), &encMessage, &encMessageLength);
-		Base64Encode(encMessage, encMessageLength, &base64Text);
+		unsigned char* encMessage = NULL;
+		//char* base64Text = NULL;
+		size_t encMessageLength = 0;
+		
+		bool res = RSASign(privateRSA, (unsigned char*) plainText.c_str(), plainText.length(), &encMessage, &encMessageLength);
+		if (!res) {
+			std::cout << "problem generating signature" << std::endl;
+		}
+
+		std::cout << "sig is " << encMessageLength << " bytes" << std::endl;
+
+		std::string signatureStr(reinterpret_cast<char const*>(encMessage), encMessageLength);
+		std::string b64 = encode64(signatureStr);
+
 		free(encMessage);
-		return base64Text;
+
+		//std::cout << "encode64: " << b64 << std::endl;
+
+		return b64;
+		
+
+		//Base64Encode(encMessage, encMessageLength, &base64Text);
+
+		//std::cout << "b64sig: " << base64Text << std::endl;
+		//return base64Text;
 	}
 
 	size_t calcDecodeLength(const char* b64input) {

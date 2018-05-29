@@ -863,10 +863,27 @@ namespace http {
 					throw std::invalid_argument("invalid signature");
 				}
 			} catch (std::exception& e) {
-				// TODO: temporary error state for debugging
+				boost::property_tree::ptree datajson;		   
+
+				datajson.put("error", "DICOM call failed");
+				datajson.put("message", e.what());
+
+				std::stringstream datass;
+				boost::property_tree::write_json(datass, datajson, false);
+				std::string data = datass.str();  
+
+				// fix property_tree compact write_json bug: https://svn.boost.org/trac10/ticket/121490
+				boost::trim_right(data);
+
 				boost::property_tree::ptree res;		   
 				res.put("dicom", "1.0");
-				res.put("error", e.what());
+				res.put("payload", data);
+
+				if (client) {
+					// can't sign if the session hasn't been established
+					std::string signature = payload::generate_signature(data, client->server_keys.priv);
+					res.put("signature", signature);
+				}
 
 				std::stringstream repss;
 				boost::property_tree::write_json(repss, res);

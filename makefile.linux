@@ -33,7 +33,8 @@ OBJS= \
     build/dicom.o \
     build/ssserver.o \
     build/sss-daemon.o \
-    build/payload.o 
+    build/payload.o \
+    build/base64.o 
 
 all: sss-daemon
 

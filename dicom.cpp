@@ -23,6 +23,7 @@
 #include "keyvaluedb.hpp"
 #include "ssserver.hpp"
 #include "payload.hpp"
+#include "base64.hpp"
 
 namespace dicom {
 	class user {
@@ -44,12 +45,12 @@ namespace dicom {
 	};
 
 	static bool rpcq(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-
 		boost::asio::io_service ios;
 		boost::property_tree::ptree rpcreply;
 
-		rpcutil::client c( ios );
-		c.connect( "localhost:4434", "xfuelrpc", "pw123" );
+		rpcutil::client c(ios);
+		// TODO: fixup host and extract login parameters to config
+		c.connect("localhost:2222", "xcuser", "yxcpwd");
 
 		rpcreply = c.rpcquery(request["params"].GetString());
 
@@ -168,48 +169,78 @@ namespace dicom {
 		return true;
 	}
 
-	static bool user_create(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
-		if (!request.HasMember("username")) {
-			reply.put("message", "username required");
+	static bool rpc_command(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		boost::asio::io_service ios;
+		boost::property_tree::ptree rpcreply;
+
+		if (!request.HasMember("rpc_method")) {
+			reply.put("message", "rpc_method required");
 			return false;
 		}
 
-		if (!request.HasMember("password")) {
-			reply.put("message", "password required");
-			return false;
+		std::string rpc_method = request["rpc_method"].GetString();
+
+		std::string rpc_params;
+		if (request.HasMember("rpc_params")) {
+			rpc_params = decode64(request["rpc_params"].GetString());
 		}
 
-		std::string username = request["username"].GetString();
-		std::string password = request["password"].GetString();
 
-		if (password.length() < 8) {
-			reply.put("message", "password must be more than 8 characters");
-			return false;
+		/*
+		boost::property_tree::ptree jsonrpc;		   
+		boost::property_tree::ptree params;		   
+		std::vector<std::string> rpc_params;
+
+		if (request.HasMember("rpc_params")) {
+			std::string paramstr = decode64(request["rpc_params"].GetString());
+			boost::split(rpc_params, paramstr, boost::is_any_of(" "));
+			for (unsigned int i = 0; i < rpc_params.size(); i++) {
+				boost::property_tree::ptree item;		   
+
+				item.put("", rpc_params[i]);
+				params.push_back(std::make_pair("", item));
+			}
 		}
 
-		std::string key = "user:" + username + password + ":xby";
-		std::string value = "";
+		jsonrpc.put("jsonrpc", "1.0");
+		jsonrpc.put("id", "sssd");
+		jsonrpc.put("method", rpc_method);
 
-		std::string hash = keyvaluedb.getkey(key);
-
-		if (keyvaluedb.exists(hash)) {
-			reply.put("message", "username exists");
-			return false;
+		if (rpc_params.size() > 0) {
+			jsonrpc.add_child("params", params);
 		}
 
-		keyvaluedb.write(hash, value);
+		std::stringstream repss;
+		boost::property_tree::write_json(repss, jsonrpc, false);
+		std::string command = repss.str();  
+		*/
+
+		std::string command = R"({"jsonrpc":"1.0","id":"sss-daemon","method":")" + rpc_method + R"(","params":[)" + rpc_params + R"(]})";
+
+		std::cout << command << std::endl;
+	
+		rpcutil::client c(ios);
+		c.connect("localhost:2222", "xcuser", "yxcpwd");
+		std::stringstream rpcrepss;
+		try {
+			boost::property_tree::write_json(rpcrepss, c.rpcquery(command), false);
+		}	catch (std::exception& e)  {
+			rpcrepss << "bad rpc reply error:" << e.what();
+		}	
+		reply.put("reply", rpcrepss.str() );
 
 		return true;
 	}
 
-	static bool user_login(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+	static bool user_verify(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		// TODO: add proof-of-work to this to avoid brute force attempts
 		if (!request.HasMember("username")) {
-			reply.put("message", "username required");
+			reply.put("message", "Username required");
 			return false;
 		}
 
 		if (!request.HasMember("password")) {
-			reply.put("message", "password required");
+			reply.put("message", "Password required");
 			return false;
 		}
 
@@ -221,7 +252,72 @@ namespace dicom {
 
 		std::string private_key; 
 		if (!keyvaluedb.read(hash, private_key)) {
-			reply.put("message", "user not found");
+			reply.put("message", "User not found");
+			return false;
+		}
+
+		reply.put("username", username);
+
+		return true;
+	}
+
+	static bool user_create(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!request.HasMember("username")) {
+			reply.put("message", "Username required");
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			reply.put("message", "Password required");
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		if (password.length() < 8) {
+			reply.put("message", "Password must be more than 8 characters");
+			return false;
+		}
+
+		std::string key = "user:" + username + password + ":xby";
+		std::string value = "";
+
+		std::string hash = keyvaluedb.getkey(key);
+
+		// TODO: Better sanity check required: usernames should be unique
+
+		if (keyvaluedb.exists(hash)) {
+			reply.put("message", "Username already exists");
+			return false;
+		}
+
+		keyvaluedb.write(hash, value);
+
+		return true;
+	}
+
+	static bool user_login(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		// TODO: add proof-of-work to this to avoid brute force attempts
+		if (!request.HasMember("username")) {
+			reply.put("message", "Username required");
+			return false;
+		}
+
+		if (!request.HasMember("password")) {
+			reply.put("message", "Password required");
+			return false;
+		}
+
+		std::string username = request["username"].GetString();
+		std::string password = request["password"].GetString();
+
+		std::string key = "user:" + username + password + ":xby";
+		std::string hash = keyvaluedb.getkey(key);
+
+		std::string private_key; 
+		if (!keyvaluedb.read(hash, private_key)) {
+			reply.put("message", "Login failed: Invalid username/password");
 			return false;
 		}
 
@@ -234,12 +330,12 @@ namespace dicom {
 
 	static bool privatekey_import(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
 		if (!client->is_logged_in()) {
-			reply.put("message", "login required");
+			reply.put("message", "Logged in session required");
 			return false;
 		}
 
 		if (!request.HasMember("key")) {
-			reply.put("message", "key required");
+			reply.put("message", "Key required");
 			return false;
 		}
 
@@ -250,6 +346,26 @@ namespace dicom {
 		keyvaluedb.write(key, private_key);
 
 		reply.put("key", private_key);
+
+		return true;
+	}
+
+	static bool transaction_send(http::dicomserver::client *client, const rapidjson::Document &request, boost::property_tree::ptree &reply) {
+		if (!client->is_logged_in()) {
+			reply.put("message", "Logged in session required");
+			return false;
+		}
+
+		if (!request.HasMember("transaction")) {
+			reply.put("message", "Transaction required");
+			return false;
+		}
+
+		std::string tx = request["transaction"].GetString();
+
+		reply.put("rawbytes", tx);
+
+		reply.put("transaction_id", tx);
 
 		return true;
 	}
@@ -267,7 +383,10 @@ namespace dicom {
 
 		// refactored 
 		{ "privatekey.import", privatekey_import },
+		{ "transaction.send", transaction_send },
+		{ "rpc.command", rpc_command },
 		{ "user.create", user_create },
+		{ "user.verify", user_verify },
 		{ "user.login", user_login },
 	};
 
@@ -300,7 +419,7 @@ namespace dicom {
 		// fix property_tree compact write_json bug: https://svn.boost.org/trac10/ticket/121490
 		boost::trim_right(data);
 
-		char *signature = payload::generate_signature(data, client->server_keys.priv);
+		std::string signature = payload::generate_signature(data, client->server_keys.priv);
 
 		boost::property_tree::ptree res;
 		res.put("dicom", "1.0");

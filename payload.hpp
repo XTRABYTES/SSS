@@ -21,7 +21,7 @@ namespace payload {
 	};
 
 	bool verify_signature(std::string data, std::string signature, std::string pubkey);
-	char *generate_signature(std::string data, std::string privkey);
+	std::string generate_signature(std::string data, std::string privkey);
 	bool generate_keypair(keypair &keypair);
 }
 
